@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:autononext/models/tracked_app.dart';
 import 'package:autononext/services/external_app_checker.dart';
 
 void main() {
@@ -31,6 +34,69 @@ void main() {
     test('returns null for unparseable output', () {
       expect(ExternalAppChecker.extractVersion('command not found'), isNull);
       expect(ExternalAppChecker.extractVersion('No package found matching'), isNull);
+    });
+  });
+
+  group('ExternalAppChecker.getExternalVersion', () {
+    late Directory tempDir;
+    late String scriptPath;
+    late String markerPath;
+    late Future<ProcessResult> Function(String, List<String>) originalRunner;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('ext_app_checker_test');
+      scriptPath = '${tempDir.path}/linsticky';
+      markerPath = '${tempDir.path}/launched.marker';
+      // A launcher that discards its arguments and starts a GUI. Writing the
+      // marker is the observable side effect of it being run.
+      await File(scriptPath).writeAsString('#!/bin/sh\ntouch "$markerPath"\n');
+      await Process.run('chmod', ['+x', scriptPath]);
+      originalRunner = ExternalAppChecker.processRunner;
+    });
+
+    tearDown(() {
+      ExternalAppChecker.processRunner = originalRunner;
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    test('a package-owned launcher that ignores arguments is never executed',
+        () async {
+      ExternalAppChecker.processRunner = (executable, args) async {
+        if (executable == 'which' &&
+            args.length == 1 &&
+            args.first == 'linsticky') {
+          return ProcessResult(0, 0, scriptPath, '');
+        }
+        if (executable == 'dpkg' &&
+            args.length == 2 &&
+            args[0] == '-S' &&
+            args[1] == scriptPath) {
+          return ProcessResult(0, 0, 'io.linsticky.app: $scriptPath', '');
+        }
+        if (executable == 'dpkg-query' &&
+            args.length == 3 &&
+            args[0] == '-W' &&
+            args[1] == r'--showformat=${Version}' &&
+            args[2] == 'io.linsticky.app') {
+          return ProcessResult(0, 0, '2.0.3', '');
+        }
+        return ProcessResult(0, 1, '', '');
+      };
+
+      final app = TrackedApp(
+        repoOwner: 'io',
+        repoName: 'linsticky',
+        displayName: 'Linsticky',
+        launchCommand: 'linsticky',
+        packageName: 'linsticky',
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final version = await ExternalAppChecker.getExternalVersion(app);
+
+      expect(version, '2.0.3');
+      expect(File(markerPath).existsSync(), isFalse,
+          reason: 'the launcher must not be executed by the version probe');
     });
   });
 }

@@ -15,6 +15,11 @@ class ExternalAppChecker {
   /// Provider for deb package versions, can be overridden for testing
   static ExternalDebVersionProvider debVersionProvider = _defaultDebVersionProvider;
 
+  /// Runs an external process to completion. Overridable so tests can exercise
+  /// the probe without invoking real system tools.
+  static Future<ProcessResult> Function(String executable, List<String> args) processRunner =
+      (executable, args) => Process.run(executable, args);
+
   static final RegExp _versionRegExp = RegExp(
     r'(?:v|version\s+)?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9\.\-]+)?)',
     caseSensitive: false,
@@ -71,7 +76,7 @@ class ExternalAppChecker {
   static Future<String?> _dpkgExactVersion(String name) async {
     try {
       // Resolved through PATH: /usr/bin only exists on Debian-family systems.
-      final dpkgRes = await Process.run('dpkg-query', ['-W', r'--showformat=${Version}', name])
+      final dpkgRes = await processRunner('dpkg-query', ['-W', r'--showformat=${Version}', name])
           .timeout(const Duration(seconds: 2));
       if (dpkgRes.exitCode != 0) return null;
       final out = dpkgRes.stdout.toString().trim();
@@ -92,7 +97,7 @@ class ExternalAppChecker {
   /// other candidate the wildcard returned.
   static Future<String?> _dpkgWildcardVersion(String name) async {
     try {
-      final dpkgWildRes = await Process.run('dpkg-query', ['-W', r'--showformat=${Package}|${Version}\n', '*$name*'])
+      final dpkgWildRes = await processRunner('dpkg-query', ['-W', r'--showformat=${Package}|${Version}\n', '*$name*'])
           .timeout(const Duration(seconds: 2));
       if (dpkgWildRes.exitCode != 0) return null;
 
@@ -127,13 +132,22 @@ class ExternalAppChecker {
   /// Runs `<name> --version` / `<name> -v` for a binary found on PATH.
   static Future<String?> _pathBinaryVersion(String name) async {
     try {
-      final whichRes = await Process.run('which', [name])
+      final whichRes = await processRunner('which', [name])
           .timeout(const Duration(seconds: 1));
       if (whichRes.exitCode != 0) return null;
       final path = whichRes.stdout.toString().trim();
       if (path.isEmpty) return null;
 
       dlog('ExternalAppChecker', 'which found binary for $name at $path');
+
+      // Prefer the owning package's version. A GUI launcher that ignores its
+      // arguments would otherwise be launched by the `--version` probe below.
+      final fromPackage = await _packageVersionForPath(path);
+      if (fromPackage != null) {
+        dlog('ExternalAppChecker', 'Extracted version from owning package for $name: $fromPackage');
+        return fromPackage;
+      }
+
       final ver = await _runWithTimeout(path, ['--version']);
       if (ver != null) {
         dlog('ExternalAppChecker', 'Extracted version via --version for $name: $ver');
@@ -150,6 +164,45 @@ class ExternalAppChecker {
       dlog('ExternalAppChecker', 'Error in which/run for $name: $e');
       return null;
     }
+  }
+
+  /// Returns the version of the package that owns [path], without executing
+  /// the binary itself.
+  ///
+  /// Debian-family systems are queried with `dpkg -S`, RPM-based ones with
+  /// `rpm -qf`. Returns null on any failure so callers fall back to probing the
+  /// binary directly.
+  static Future<String?> _packageVersionForPath(String path) async {
+    // Debian: `dpkg -S <path>` prints `<package>: <path>`.
+    try {
+      final res = await processRunner('dpkg', ['-S', path])
+          .timeout(const Duration(seconds: 2));
+      if (res.exitCode == 0) {
+        final out = res.stdout.toString().trim();
+        final pkg = out.split(':').first.trim();
+        if (pkg.isNotEmpty) {
+          final ver = await _dpkgExactVersion(pkg);
+          if (ver != null) return ver;
+        }
+      }
+    } catch (e) {
+      dlog('ExternalAppChecker', 'Error in dpkg -S for $path: $e');
+    }
+
+    // RPM fallback: `rpm -qf --queryformat %{VERSION} <path>` prints the
+    // owning package's version directly.
+    try {
+      final res = await processRunner('rpm', ['-qf', '--queryformat', '%{VERSION}', path])
+          .timeout(const Duration(seconds: 2));
+      if (res.exitCode == 0) {
+        final out = res.stdout.toString().trim();
+        if (out.isNotEmpty) return extractVersion(out) ?? out;
+      }
+    } catch (e) {
+      dlog('ExternalAppChecker', 'Error in rpm -qf for $path: $e');
+    }
+
+    return null;
   }
 
   static List<String> _generateAppGuesses(TrackedApp app) {
