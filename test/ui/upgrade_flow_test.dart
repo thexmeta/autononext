@@ -149,6 +149,29 @@ void main() {
     );
   });
 
+  group('needsInstallTarget', () {
+    test('a raw binary install is the only type that needs a destination', () {
+      expect(needsInstallTarget(InstallType.binary), isTrue);
+    });
+
+    test('package-managed types never ask, because they ignore the path', () {
+      // These installs were prompting for a location whose answer was then
+      // discarded: apt-get/rpm/flatpak place their own files and the AppImage
+      // branch uses its own directory, so targetPath never reaches the disk.
+      for (final type in const [
+        InstallType.deb,
+        InstallType.rpm,
+        InstallType.appImage,
+        InstallType.flatpak,
+        InstallType.snap,
+        InstallType.source,
+      ]) {
+        expect(needsInstallTarget(type), isFalse,
+            reason: '$type places its own files and ignores targetPath');
+      }
+    });
+  });
+
   group('chooseInstallTarget', () {
     testWidgets(
       'returns the only candidate without asking — one location is unambiguous',

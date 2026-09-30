@@ -865,8 +865,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final asset = await chooseAsset(context, release, type, app: app);
       if (asset == null) return;
       if (!mounted) return;
-      final target = await chooseInstallTarget(context, app);
-      if (target == null) return;
+      // Only a raw binary install needs a destination; a package-managed type
+      // ignores the path, so asking for it would have no effect on the outcome.
+      final String? target;
+      if (needsInstallTarget(type)) {
+        target = await chooseInstallTarget(context, app);
+        if (target == null) return;
+      } else {
+        target = null;
+      }
       if (!mounted) return;
 
       await performUpgrade(
@@ -2338,14 +2345,21 @@ class _AppDetailsSheetState extends State<AppDetailsSheet> {
       }
 
       if (!context.mounted) return;
-      final target = await chooseInstallTarget(
-        context,
-        widget.app,
-        candidatesOverride: widget.candidatesOverride,
-      );
-      if (target == null) {
-        if (mounted) setState(() => _isInstalling = false);
-        return;
+      // Only a raw binary install needs a destination; a package-managed type
+      // ignores the path, so asking for it would have no effect on the outcome.
+      final String? target;
+      if (needsInstallTarget(selectedType)) {
+        target = await chooseInstallTarget(
+          context,
+          widget.app,
+          candidatesOverride: widget.candidatesOverride,
+        );
+        if (target == null) {
+          if (mounted) setState(() => _isInstalling = false);
+          return;
+        }
+      } else {
+        target = null;
       }
 
       if (!context.mounted) return;

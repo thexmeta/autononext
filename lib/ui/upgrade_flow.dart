@@ -178,8 +178,15 @@ Future<ReleaseAsset?> chooseAsset(
   );
 }
 
+/// Whether the user must choose a destination for [type].
+///
+/// Only a raw binary install needs one. The package-managed types — deb, rpm,
+/// flatpak — and AppImage all place their own files and ignore the path, so
+/// asking for one is a question with no effect on the outcome.
+bool needsInstallTarget(InstallType type) => type == InstallType.binary;
+
 /// Resolves where an app is currently installed and returns the absolute path
-/// the upgrade should overwrite.
+/// the upgrade should overwrite. Callers gate on [needsInstallTarget] first.
 ///
 /// * 0 candidates — asks for a path, prefilled with `<home>/.local/bin/<name>`.
 /// * 1 candidate — returns it without asking, but a package-managed target
@@ -355,9 +362,12 @@ Future<String?> _pickFromCandidates(
   );
 }
 
-/// Downloads [assetName] from [downloadUrl], installs it into [targetPath] as
-/// [type], and persists the result. Returns true only when every step
-/// succeeded; the success message is never shown on a failure path.
+/// Downloads [assetName] from [downloadUrl], installs it as [type], and
+/// persists the result. Returns true only when every step succeeded; the
+/// success message is never shown on a failure path.
+///
+/// [targetPath] is the destination for a raw binary install and is ignored by
+/// every package-managed type, so it is null when the caller did not ask.
 Future<bool> performUpgrade({
   required BuildContext context,
   required TrackedApp app,
@@ -365,7 +375,7 @@ Future<bool> performUpgrade({
   required InstallType type,
   required String assetName,
   required String downloadUrl,
-  required String targetPath,
+  String? targetPath,
 }) async {
   final installer = context.read<InstallerService>();
   final db = context.read<DatabaseService>();
