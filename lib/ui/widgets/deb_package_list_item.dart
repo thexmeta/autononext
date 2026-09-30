@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/tracked_deb_package.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'error_snack.dart';
 
 class DebPackageListItem extends StatelessWidget {
   final TrackedDebPackage package;
@@ -199,9 +200,7 @@ class DebPackageListItem extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open URL: $e')),
-        );
+        showErrorSnack(context, 'Could not open URL: $e');
       }
     }
   }

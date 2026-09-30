@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/tracked_deb_package.dart';
+import 'error_snack.dart';
 
 class EditDebPackageDialog extends StatefulWidget {
   final TrackedDebPackage package;
@@ -39,16 +40,16 @@ class _EditDebPackageDialogState extends State<EditDebPackageDialog> {
     final displayName = _displayNameController.text.trim();
 
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Internal name is required')),
-      );
+      showErrorSnack(context, 'Internal name is required', isWarning: true);
       return;
     }
 
     final uri = Uri.tryParse(url);
     if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https') || uri.host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A valid http(s) package URL is required')),
+      showErrorSnack(
+        context,
+        'A valid http(s) package URL is required',
+        isWarning: true,
       );
       return;
     }

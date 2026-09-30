@@ -5,6 +5,7 @@ import '../../models/tracked_app.dart';
 import '../../services/github_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/external_app_checker.dart';
+import 'error_snack.dart';
 import 'filter_preview.dart';
 
 class AddAppDialog extends StatefulWidget {
@@ -452,9 +453,7 @@ class _AddAppDialogState extends State<AddAppDialog> {
                       : (_tagPrefixController.text.isEmpty ? null : _tagPrefixController.text),
                 );
                 if (filterError != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(filterError)),
-                  );
+                  showErrorSnack(context, filterError, isWarning: true);
                   return;
                 }
                 Navigator.of(context).pop({

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/tracked_app.dart';
+import 'error_snack.dart';
 
 class AppListItem extends StatelessWidget {
   final TrackedApp app;
@@ -220,9 +221,7 @@ class AppListItem extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open URL: $e')),
-        );
+        showErrorSnack(context, 'Could not open URL: $e');
       }
     }
   }

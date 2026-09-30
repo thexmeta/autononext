@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/tracked_app.dart';
 import '../../services/github_service.dart';
+import 'error_snack.dart';
 import 'filter_preview.dart';
 
 class EditAppDialog extends StatefulWidget {
@@ -123,9 +124,7 @@ class _EditAppDialogState extends State<EditAppDialog> {
     if (_nameController.text.trim().isEmpty ||
         _ownerController.text.trim().isEmpty ||
         _repoController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
+      showErrorSnack(context, 'Please fill all required fields', isWarning: true);
       return;
     }
 
@@ -134,9 +133,7 @@ class _EditAppDialogState extends State<EditAppDialog> {
       tagPrefix: _tagPrefixController.text.isEmpty ? null : _tagPrefixController.text,
     );
     if (filterError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(filterError)),
-      );
+      showErrorSnack(context, filterError, isWarning: true);
       return;
     }
 
@@ -164,9 +161,7 @@ class _EditAppDialogState extends State<EditAppDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error preparing app update: $e')),
-        );
+        showErrorSnack(context, 'Error preparing app update: $e');
       }
     }
   }
