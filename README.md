@@ -27,7 +27,7 @@ preview reporting the release, architecture and asset filenames the current filt
 ### Tracking
 - **GitHub repository tracking** — add any GitHub repository and follow its releases
 - **Direct `.deb` URL tracking** — track a package by `.deb` URL without a GitHub repository, with an auto-update flag (currently inert — see Known limitations) and a `DIRECT` badge in the list
-- **Installed-version detection** — package queries (`dpkg-query`) and executable probes (`--version` / `-v`) determine the installed version, which is compared against the latest release to compute update availability; detection no longer relies on hardcoded `/usr/bin` paths, so it also works on RPM-based and other non-Debian distributions
+- **Installed-version detection** — package queries (`dpkg-query`) determine the installed version, and a binary found on `PATH` is resolved to its owning package (`dpkg -S`, or `rpm -qf` on RPM systems) so the version is read from the package rather than by running the binary; only a binary with no owning package is probed with `--version` / `-v`. That means a GUI launcher which ignores its arguments is never started just to check its version. Detection no longer relies on hardcoded `/usr/bin` paths, so it also works on RPM-based and other non-Debian distributions
 - **Architecture badge in the app list** — each tracked GitHub app row shows an uppercase badge listing all of its selected architectures (for example `AMD64/ARM64`); not shown for direct `.deb` entries
 - **Launch tracked applications** from the UI, with package-name / launch-command auto-discovery in the add and edit dialogs; launch commands may include arguments
 - **Stop tracking / remove from list** — distinct from uninstall: removes the entry from Autononext without touching the installed package
@@ -99,7 +99,7 @@ make bump-patch   # bump patch version
 make help         # list available targets
 ```
 
-Tests run with `flutter test` (there is no `make test` target); 31 test files plus shared mocks under `test/`. The project is verified clean with `flutter analyze` (no issues found) and `flutter test` (293 tests passing).
+Tests run with `flutter test` (there is no `make test` target); 31 test files plus shared mocks under `test/`. The project is verified clean with `flutter analyze` (no issues found) and `flutter test` (298 tests passing).
 
 ## Installation
 
