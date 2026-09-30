@@ -28,6 +28,7 @@ import '../widgets/theme_selector.dart';
 import '../widgets/batch_action_bar.dart';
 import 'widgets/edit_app_dialog.dart';
 import 'widgets/edit_deb_package_dialog.dart';
+import 'widgets/error_snack.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,9 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading apps: $e')),
-        );
+        showErrorSnack(context, 'Error loading apps: $e');
       }
     }
   }
@@ -148,9 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open URL: $e')),
-        );
+        showErrorSnack(context, 'Could not open URL: $e');
       }
     }
   }
@@ -314,9 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
             'stack': stackTrace.toString(),
           });
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error removing app: $e')),
-            );
+            showErrorSnack(context, 'Error removing app: $e');
           }
         }
       }
@@ -326,9 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'stack': stackTrace.toString(),
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fatal error: $e')),
-        );
+        showErrorSnack(context, 'Fatal error: $e');
       }
     }
     
@@ -447,9 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
-        );
+        showErrorSnack(context, 'Error saving: $e');
       }
     }
   }
@@ -836,12 +827,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (packageInfo == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No update found'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          showErrorSnack(context, 'No update found', isWarning: true);
         }
         return;
       }
@@ -852,11 +838,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (assetName == null || downloadUrl == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No installable asset in ${release.tagName}'),
-              backgroundColor: Colors.orange,
-            ),
+          showErrorSnack(
+            context,
+            'No installable asset in ${release.tagName}',
+            isWarning: true,
           );
         }
         return;
@@ -865,11 +850,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final type = installer.identifyAssetType(assetName, app: app);
       if (type == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No installable asset in ${release.tagName}'),
-              backgroundColor: Colors.orange,
-            ),
+          showErrorSnack(
+            context,
+            'No installable asset in ${release.tagName}',
+            isWarning: true,
           );
         }
         return;
@@ -898,12 +882,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadApps();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upgrade failed: $e'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        showErrorSnack(context, 'Upgrade failed: $e');
       }
     }
   }
@@ -930,22 +909,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No update found'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          showErrorSnack(context, 'No update found', isWarning: true);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating deb package: $e'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        showErrorSnack(context, 'Error updating deb package: $e');
       }
     }
     
@@ -1188,9 +1157,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error adding app: $e')),
-          );
+          showErrorSnack(context, 'Error adding app: $e');
         }
       }
     }
@@ -1221,9 +1188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error saving: $e')),
-          );
+          showErrorSnack(context, 'Error saving: $e');
         }
       }
     }

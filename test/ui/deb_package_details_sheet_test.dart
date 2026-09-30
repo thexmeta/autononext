@@ -96,6 +96,11 @@ void main() {
 
       expect(find.byType(DebPackageDetailsSheet), findsOneWidget);
       expect(find.textContaining('Launch failed'), findsOneWidget);
+
+      // The error snackbar is persistent now, so dismiss it explicitly;
+      // otherwise its Timer outlives the widget tree.
+      await tester.tap(find.text('Dismiss'));
+      await tester.pumpAndSettle();
     });
   });
 }

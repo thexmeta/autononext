@@ -349,7 +349,9 @@ void main() {
         expect(find.textContaining('Upgrade failed'), findsOneWidget);
         expect(find.textContaining('Upgraded '), findsNothing);
 
-        await tester.pump(const Duration(seconds: 5));
+        // The error snackbar is persistent now, so dismiss it explicitly;
+        // otherwise its Timer outlives the widget tree.
+        await tester.tap(find.text('Dismiss'));
         await tester.pumpAndSettle();
       },
     );
@@ -390,7 +392,9 @@ void main() {
         expect(installer.downloadCount, 0);
         expect(find.textContaining('is not newer'), findsOneWidget);
 
-        await tester.pump(const Duration(seconds: 5));
+        // The warning snackbar is persistent now, so dismiss it explicitly;
+        // otherwise its Timer outlives the widget tree.
+        await tester.tap(find.text('Dismiss'));
         await tester.pumpAndSettle();
       },
     );

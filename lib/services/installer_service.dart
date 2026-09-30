@@ -897,9 +897,17 @@ class InstallerService {
 
     // Checked outside the try so a failing command is not wrapped twice.
     if (result.exitCode != 0) {
+      // apt writes the actionable diagnosis ("The following packages have
+      // unmet dependencies: ...") to stdout and only terse "E:" lines to
+      // stderr, so surface both. stderr first, stdout appended.
       final stderr = result.stderr.toString().trim();
+      final stdout = result.stdout.toString().trim();
+      final details = [
+        if (stderr.isNotEmpty) stderr,
+        if (stdout.isNotEmpty) stdout,
+      ].join('\n');
       throw Exception(
-        'Command failed (exit code ${result.exitCode})${stderr.isNotEmpty ? ': $stderr' : ''}',
+        'Command failed (exit code ${result.exitCode})${details.isNotEmpty ? ': $details' : ''}',
       );
     }
   }

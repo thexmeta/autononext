@@ -4,6 +4,7 @@ import '../../models/tracked_deb_package.dart';
 import '../../models/install_type.dart';
 import '../../services/database_service.dart';
 import '../../services/installer_service.dart';
+import 'error_snack.dart';
 
 class DebPackageDetailsSheet extends StatefulWidget {
   final TrackedDebPackage package;
@@ -192,9 +193,7 @@ class _DebPackageDetailsSheetState extends State<DebPackageDetailsSheet> {
           _isUninstalling = false;
           _statusMessage = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Uninstallation failed: $e'), backgroundColor: Colors.red),
-        );
+        showErrorSnack(context, 'Uninstallation failed: $e');
       }
     }
   }
@@ -210,9 +209,7 @@ class _DebPackageDetailsSheetState extends State<DebPackageDetailsSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _statusMessage = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Launch failed: $e'), backgroundColor: Colors.red),
-        );
+        showErrorSnack(context, 'Launch failed: $e');
       }
     }
   }
@@ -250,9 +247,7 @@ class _DebPackageDetailsSheetState extends State<DebPackageDetailsSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Installation failed: $e'), backgroundColor: Colors.red),
-        );
+        showErrorSnack(context, 'Installation failed: $e');
       }
     } finally {
       if (mounted) {

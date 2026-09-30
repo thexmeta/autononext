@@ -11,6 +11,7 @@ import '../services/database_service.dart';
 import '../services/install_location.dart';
 import '../services/installer_service.dart';
 import '../utils/glob_pattern.dart';
+import 'widgets/error_snack.dart';
 
 /// Shared upgrade flow used by both the list-row action and the details sheet.
 ///
@@ -375,14 +376,11 @@ Future<bool> performUpgrade({
   final installed = app.installedVersion;
   if (installed != null && !isNewerVersion(release.tagName, installed)) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${app.displayName} is already at $installed; '
-            '${release.tagName} is not newer',
-          ),
-          backgroundColor: Colors.orange.shade700,
-        ),
+      showErrorSnack(
+        context,
+        '${app.displayName} is already at $installed; '
+        '${release.tagName} is not newer',
+        isWarning: true,
       );
     }
     return false;
@@ -424,12 +422,7 @@ Future<bool> performUpgrade({
     return true;
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Upgrade failed: $e'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
+      showErrorSnack(context, 'Upgrade failed: $e');
     }
     return false;
   }
