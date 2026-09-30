@@ -883,6 +883,12 @@ class InstallerService {
     List<String> args, {
     String? workingDirectory,
   }) async {
+    final printable = 'pkexec $command ${args.join(' ')}';
+
+    // Log the command before it runs, so the in-app log viewer shows what was
+    // attempted even if the command then fails.
+    dlog('InstallerService', 'Running privileged command: $printable');
+
     // Try pkexec first
     final ProcessResult result;
     try {
@@ -892,24 +898,33 @@ class InstallerService {
         workingDirectory: workingDirectory,
       );
     } catch (e) {
+      dlog('InstallerService', 'Failed to run privileged command: $e');
       throw Exception('Failed to run privileged command: $e');
     }
 
     // Checked outside the try so a failing command is not wrapped twice.
     if (result.exitCode != 0) {
-      // apt writes the actionable diagnosis ("The following packages have
-      // unmet dependencies: ...") to stdout and only terse "E:" lines to
-      // stderr, so surface both. stderr first, stdout appended.
-      final stderr = result.stderr.toString().trim();
+      // apt writes the actionable diagnosis ("Reading package lists...",
+      // "The following packages have unmet dependencies: ...") to stdout and
+      // only terse "E:" lines to stderr. Surface both, stdout first, so the
+      // message reads in the same order the command actually produced it.
       final stdout = result.stdout.toString().trim();
+      final stderr = result.stderr.toString().trim();
       final details = [
-        if (stderr.isNotEmpty) stderr,
         if (stdout.isNotEmpty) stdout,
+        if (stderr.isNotEmpty) stderr,
       ].join('\n');
+      dlog(
+        'InstallerService',
+        'Privileged command failed (exit code ${result.exitCode}): $printable',
+        data: {'stdout': stdout, 'stderr': stderr},
+      );
       throw Exception(
         'Command failed (exit code ${result.exitCode})${details.isNotEmpty ? ': $details' : ''}',
       );
     }
+
+    dlog('InstallerService', 'Privileged command succeeded: $printable');
   }
 
   /// Removes the downloaded file once it has been installed successfully.

@@ -811,5 +811,53 @@ void main() {
       );
       expect(pathArg.startsWith('./'), isFalse);
     });
+
+    test('reports stdout before stderr so apt output reads in command order',
+        () async {
+      // Regression: apt writes the actionable diagnosis ("Reading package
+      // lists...", "The following packages have unmet dependencies: ...") to
+      // stdout and only terse "E:" lines to stderr. The message shown to the
+      // user must lead with stdout, in the order the command produced it.
+      final deb = File(
+        p.join(tmp.path, 'downloads', 'cliptoo_2.17.1-1_amd64.deb'),
+      )
+        ..createSync(recursive: true)
+        ..writeAsStringSync('not-really-a-deb');
+
+      service.privilegedProcessRunner =
+          (executable, args, {workingDirectory}) async {
+        recorded.add([executable, ...args]);
+        return ProcessResult(
+          100,
+          100,
+          'Reading package lists...\n'
+              'The following packages have unmet dependencies:\n'
+              ' cliptoo : Depends: libqt6gui6t64 (>= 6.1.2) but it is not installable',
+          'E: Unable to correct problems, you have held broken packages.',
+        );
+      };
+
+      Object? thrown;
+      try {
+        await service.installPackage(deb, InstallType.deb);
+      } catch (e) {
+        thrown = e;
+      }
+
+      expect(
+        thrown,
+        isNotNull,
+        reason: 'a failing apt-get must surface an error',
+      );
+      final message = thrown.toString();
+      expect(message, contains('exit code 100'));
+      expect(message, contains('Reading package lists'));
+      expect(message, contains('E: Unable to correct problems'));
+      expect(
+        message.indexOf('Reading package lists'),
+        lessThan(message.indexOf('E: Unable to correct problems')),
+        reason: 'stdout carries the actionable diagnosis and must come first',
+      );
+    });
   });
 }
