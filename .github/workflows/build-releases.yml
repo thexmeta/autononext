@@ -1,0 +1,136 @@
+name: Build and Release Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      # One format failing must not cancel the others; the release job is gated
+      # on all of them anyway.
+      fail-fast: false
+      matrix:
+        include:
+          - format: debian
+            pattern: '*.deb'
+            command: ./scripts/create-debian-package.sh
+          - format: rpm
+            pattern: '*.rpm'
+            command: ./scripts/create-rpm-package.sh
+          - format: linux-x64
+            pattern: '*.tar.gz'
+            command: |
+              flutter build linux --release
+              VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+              mkdir -p dist/linux-x64
+              tar -czf "dist/linux-x64/autononext-${VERSION}-linux-x64.tar.gz" \
+                -C build/linux/x64/release bundle
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake git ninja-build pkg-config \
+            libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev \
+            libsecret-1-dev libjsoncpp-dev \
+            libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+            dpkg-dev rpm imagemagick
+
+      - name: Verify Flutter toolchain
+        run: flutter doctor -v
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Build ${{ matrix.format }}
+        run: |
+          chmod +x scripts/*.sh
+          ${{ matrix.command }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.format }}-package
+          path: dist/**/${{ matrix.pattern }}
+          if-no-files-found: error
+          retention-days: 7
+
+  create-release:
+    needs: build-packages
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      # A tag such as v0.1.0-b1 is a beta and must NOT be published as the
+      # repository's "Latest" stable release, or every beta would be handed to
+      # users as the recommended download. Derive the flag from the tag itself
+      # so the next release needs no edit here.
+      - name: Detect prerelease from tag
+        id: meta
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" =~ (^|[-._])(alpha|beta|b|rc|pre|dev|nightly)[0-9]*$ ]]; then
+            prerelease=true
+          else
+            prerelease=false
+          fi
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "tag '$tag' -> prerelease=$prerelease"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \
+            \( -name "*.deb" -o -name "*.rpm" -o -name "*.tar.gz" \) \
+            -exec cp {} release-files/ \;
+          ls -lh release-files/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release-files/*
+          draft: false
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          generate_release_notes: true
+          body: |
+            ### Installation
+
+            **Debian / Ubuntu (.deb)**
+            ```bash
+            sudo dpkg -i autononext_*_amd64.deb
+            ```
+
+            **Fedora / RHEL / CentOS (.rpm)**
+            ```bash
+            sudo rpm -i autononext-*.x86_64.rpm
+            ```
+
+            **Any Linux x64 (portable tarball)**
+            ```bash
+            tar -xzf autononext-*-linux-x64.tar.gz
+            ./bundle/autononext
+            ```
+
+            Autononext is an enhanced fork of
+            [Autonomix](https://github.com/ninepointlabs/autonomix).

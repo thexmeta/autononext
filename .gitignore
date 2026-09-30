@@ -1,0 +1,64 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+.beads/
+.git/
+# Keep CI workflows tracked. A bare `.github/` would block them, and git cannot
+# re-include files under an ignored directory, so ignore the contents instead
+# and re-include the workflows folder.
+.github/*
+!.github/workflows/
+.vscode/
+.specify/
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# FVM
+
+# FVM Version Cache
+.fvm/
+
+# 1. Block recursive state ingestion (CRITICAL for OOM)
+.specify/workflows/runs/
+*.jsonl
+state.json
+
+# 2. Block native scaffolding from Dart-focused agents
+windows/
+macos/
+
+# 3. Block external tool state
+.tre/
+AGENTS.md
+ANTI_PATTERNS.md
+docs/
+.kilo/
+.vscode/
+.vscode/settings.json
+dist/docs/
+dist/

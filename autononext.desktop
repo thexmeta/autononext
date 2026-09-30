@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Autononext
+Comment=Linux package manager for GitHub releases
+Exec=/opt/autononext/bundle/autononext
+Icon=autononext
+Path=/opt/autononext
+Terminal=false
+Categories=Utility;PackageManager;
+Keywords=package;github;release;manager;
