@@ -1,0 +1,35 @@
+name: autononext
+description: A Linux package manager for GitHub releases
+publish_to: 'none'
+version: 0.1.0-b2
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  provider: ^6.0.0
+
+  # Networking
+  http: ^1.1.0
+
+  # Storage
+  path: ^1.8.0
+
+  # System integration
+  path_provider: ^2.1.0
+
+  # Utilities
+  url_launcher: ^6.3.2
+  package_info_plus: ^10.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
