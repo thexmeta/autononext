@@ -20,6 +20,16 @@ class ExternalAppChecker {
   static Future<ProcessResult> Function(String executable, List<String> args) processRunner =
       (executable, args) => Process.run(executable, args);
 
+  /// Budget for `dpkg -S` / `rpm -qf`, which scan the whole package file
+  /// database rather than an index.
+  ///
+  /// Measured at ~1.8 s warm on a 3808-package Debian system, so the previous
+  /// 2 s budget left almost no headroom and expired on a cold cache. A timeout
+  /// here is not harmless: the caller falls through to executing the binary to
+  /// read its version, which is exactly what the package lookup exists to
+  /// avoid.
+  static const Duration _packageLookupTimeout = Duration(seconds: 10);
+
   static final RegExp _versionRegExp = RegExp(
     r'(?:v|version\s+)?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9\.\-]+)?)',
     caseSensitive: false,
@@ -176,7 +186,7 @@ class ExternalAppChecker {
     // Debian: `dpkg -S <path>` prints `<package>: <path>`.
     try {
       final res = await processRunner('dpkg', ['-S', path])
-          .timeout(const Duration(seconds: 2));
+          .timeout(_packageLookupTimeout);
       if (res.exitCode == 0) {
         final out = res.stdout.toString().trim();
         final pkg = out.split(':').first.trim();
@@ -193,7 +203,7 @@ class ExternalAppChecker {
     // owning package's version directly.
     try {
       final res = await processRunner('rpm', ['-qf', '--queryformat', '%{VERSION}', path])
-          .timeout(const Duration(seconds: 2));
+          .timeout(_packageLookupTimeout);
       if (res.exitCode == 0) {
         final out = res.stdout.toString().trim();
         if (out.isNotEmpty) return extractVersion(out) ?? out;

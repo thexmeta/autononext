@@ -193,5 +193,32 @@ void main() {
       expect(File(markerPath).existsSync(), isTrue,
           reason: 'an unowned binary must still be probed directly');
     });
+
+    test('waits out a slow package lookup instead of executing the binary',
+        () async {
+      // `dpkg -S` scans the whole package file database rather than an index:
+      // measured at ~1.8 s warm on a 3808-package system. The original 2 s
+      // budget expired there and fell through to running the launcher, so the
+      // lookup must tolerate well past that.
+      ExternalAppChecker.processRunner = (executable, args) async {
+        if (executable == 'which') return ProcessResult(0, 0, scriptPath, '');
+        if (executable == 'dpkg' && args.length == 2 && args[0] == '-S') {
+          await Future<void>.delayed(const Duration(milliseconds: 2500));
+          return ProcessResult(0, 0, 'io.linsticky.app: $scriptPath', '');
+        }
+        if (executable == 'dpkg-query' &&
+            args.length == 3 &&
+            args[2] == 'io.linsticky.app') {
+          return ProcessResult(0, 0, '2.0.3', '');
+        }
+        return ProcessResult(0, 1, '', '');
+      };
+
+      final version = await ExternalAppChecker.getExternalVersion(_probeApp());
+
+      expect(version, '2.0.3');
+      expect(File(markerPath).existsSync(), isFalse,
+          reason: 'a slow lookup must not fall back to running the launcher');
+    });
   });
 }
