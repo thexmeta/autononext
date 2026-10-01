@@ -44,6 +44,91 @@ class InstallerService {
   })
   privilegedProcessRunner = _runPrivilegedProcess;
 
+  /// Derives the launch command for a just-installed package from its payload.
+  ///
+  /// [packageName] is the name read out of the .deb, or null when it could not
+  /// be read. Overridable so tests can exercise the install path without a real
+  /// package database.
+  Future<String?> Function(String? packageName) packageLaunchCommandResolver =
+      _resolvePackageLaunchCommand;
+
+  /// Reads [packageName]'s file list and desktop entries and picks the
+  /// executable it should be launched with.
+  static Future<String?> _resolvePackageLaunchCommand(String? packageName) async {
+    if (packageName == null || packageName.isEmpty) return null;
+    try {
+      final res = await Process.run('dpkg', ['-L', packageName]);
+      if (res.exitCode != 0) return null;
+
+      final files = res.stdout
+          .toString()
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+
+      final desktopExec = <String, String>{};
+      for (final desktop in files.where((f) => f.endsWith('.desktop'))) {
+        final exec = await _firstDesktopExecLine(desktop);
+        if (exec != null) desktopExec[desktop] = exec;
+      }
+
+      return chooseLaunchCommand(files, desktopExec);
+    } catch (e) {
+      dlog('InstallerService',
+          'Could not derive a launch command for $packageName: $e');
+      return null;
+    }
+  }
+
+  /// The value of the first `Exec=` line in [desktopFile], or null.
+  static Future<String?> _firstDesktopExecLine(String desktopFile) async {
+    try {
+      for (final line in await File(desktopFile).readAsLines()) {
+        if (line.startsWith('Exec=')) return line.substring('Exec='.length);
+      }
+    } catch (_) {
+      // An unreadable desktop entry simply yields no suggestion.
+    }
+    return null;
+  }
+
+  /// Picks the executable to launch from a package's payload.
+  ///
+  /// [files] is the package's file list as `dpkg -L` prints it, and
+  /// [desktopExec] maps each `.desktop` path to the raw value of its `Exec=`
+  /// line. A package's name is not its executable name — `mq-run` ships
+  /// `/usr/bin/mq`, and `fluxdown` ships both `fluxdown-agent` and
+  /// `fluxdown-desktop` — so prefer the GUI entry point the package's own
+  /// desktop file names, then a single binary, and return null rather than
+  /// guess between several.
+  static String? chooseLaunchCommand(
+    List<String> files,
+    Map<String, String> desktopExec,
+  ) {
+    final binaries = files.where(_isBinPath).toList();
+
+    for (final desktop in files.where((f) => f.endsWith('.desktop'))) {
+      final exec = desktopExec[desktop];
+      if (exec == null || exec.trim().isEmpty) continue;
+      // Exec values carry arguments and field codes, e.g. `fluxdown-desktop %U`.
+      final token = exec.trim().split(RegExp(r'\s+')).first;
+      final match = binaries.where((b) => p.basename(b) == token).toList();
+      if (match.length == 1) return match.single;
+    }
+
+    if (binaries.length == 1) return binaries.single;
+    return null;
+  }
+
+  /// Whether [path] is a directory entry holding a runnable program.
+  static bool _isBinPath(String path) {
+    for (final dir in const ['/usr/bin/', '/usr/local/bin/', '/bin/']) {
+      if (path.startsWith(dir) && path.length > dir.length) return true;
+    }
+    return false;
+  }
+
   static Future<ProcessResult> _runPrivilegedProcess(
     String executable,
     List<String> args, {
@@ -210,7 +295,11 @@ class InstallerService {
           ['install', '-y', file.path],
         );
         await _deleteTempDownload(file);
-        return (launchCommand: null, packageName: pkgName);
+        // The package's own payload is the only trustworthy source for how to
+        // launch it: the command recorded at add time is a guess from the repo
+        // name, so `fluxdown` was stored for a deb that ships `fluxdown-desktop`.
+        final launch = await packageLaunchCommandResolver(pkgName);
+        return (launchCommand: launch, packageName: pkgName);
 
       case InstallType.rpm:
         String? pkgName;

@@ -860,4 +860,116 @@ void main() {
       );
     });
   });
+
+  group('InstallerService.chooseLaunchCommand', () {
+    test('prefers the desktop entry when a package ships several binaries', () {
+      // FluxDown ships an agent and a desktop binary; only the desktop entry
+      // says which one the user actually launches.
+      final files = [
+        '/usr/bin/fluxdown-agent',
+        '/usr/bin/fluxdown-desktop',
+        '/usr/share/applications/com.fluxdown.app.desktop',
+      ];
+      expect(
+        InstallerService.chooseLaunchCommand(files, {
+          '/usr/share/applications/com.fluxdown.app.desktop':
+              'fluxdown-desktop %U',
+        }),
+        '/usr/bin/fluxdown-desktop',
+      );
+    });
+
+    test('uses the only binary when the package name is not the executable', () {
+      // mq-run is a CLI tool whose executable is /usr/bin/mq.
+      expect(
+        InstallerService.chooseLaunchCommand(
+          ['/usr/bin/mq', '/usr/share/doc/mq-run/README.md'],
+          const {},
+        ),
+        '/usr/bin/mq',
+      );
+    });
+
+    test('refuses to guess between several binaries', () {
+      expect(
+        InstallerService.chooseLaunchCommand(
+          ['/usr/bin/agent', '/usr/bin/desktop'],
+          const {},
+        ),
+        isNull,
+      );
+    });
+
+    test('ignores a desktop entry that names no shipped binary', () {
+      expect(
+        InstallerService.chooseLaunchCommand(
+          [
+            '/usr/bin/agent',
+            '/usr/bin/desktop',
+            '/usr/share/applications/x.desktop',
+          ],
+          const {'/usr/share/applications/x.desktop': 'not-shipped %U'},
+        ),
+        isNull,
+      );
+    });
+
+    test('does not treat a bare bin directory as a binary', () {
+      expect(
+        InstallerService.chooseLaunchCommand(
+          ['/usr/bin/', '/usr/share/doc/x/README'],
+          const {},
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('InstallerService deb launch command', () {
+    late InstallerService service;
+    late Directory tmp;
+    late Directory appData;
+
+    setUp(() {
+      service = InstallerService();
+      tmp = Directory.systemTemp.createTempSync('autononext_launch_test_');
+      appData = Directory(p.join(tmp.path, 'appdata'))..createSync();
+      service.appSupportDirectory = () async => appData;
+      service.privilegedProcessRunner =
+          (executable, args, {workingDirectory}) async =>
+              ProcessResult(0, 0, '', '');
+    });
+
+    tearDown(() {
+      if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    });
+
+    File makeDeb() => File(
+          p.join(tmp.path, 'downloads', 'mq-x86_64-unknown-linux-gnu.deb'),
+        )
+      ..createSync(recursive: true)
+      ..writeAsStringSync('not-really-a-deb');
+
+    test('stores the launch command the installed package provides', () async {
+      // The command recorded at add time is a guess from the repo name — for
+      // FluxDown that was `fluxdown` for a deb shipping `fluxdown-desktop` — so
+      // the install must read the answer from the package it just installed.
+      service.packageLaunchCommandResolver =
+          (packageName) async => '/usr/bin/mq';
+
+      final result = await service.installPackage(makeDeb(), InstallType.deb);
+
+      expect(result.launchCommand, '/usr/bin/mq');
+    });
+
+    test('leaves the launch command unset when the package name is unreadable',
+        () async {
+      // The default resolver must not invent a command, and must not shell out
+      // to dpkg with a null name. The fixture is not a real .deb, so the name
+      // cannot be read out of it.
+      final result = await service.installPackage(makeDeb(), InstallType.deb);
+
+      expect(result.launchCommand, isNull);
+    });
+  });
 }
