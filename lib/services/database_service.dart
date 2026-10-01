@@ -219,7 +219,7 @@ class DatabaseService {
 
   /// Last-resort version used when [PackageInfo] cannot be read. Keep in sync
   /// with `version` in pubspec.yaml.
-  static const String _fallbackAppVersion = '0.1.0-b3';
+  static const String _fallbackAppVersion = '0.1.0-b4';
 
   Future<int> importConfig(String filePath) async {
     try {
