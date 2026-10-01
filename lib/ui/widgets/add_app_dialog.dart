@@ -118,6 +118,15 @@ class _AddAppDialogState extends State<AddAppDialog> {
         final nameGuesses = ExternalAppChecker.extractNameGuessesFromFilename(filename);
         final guessedName = nameGuesses.isNotEmpty ? nameGuesses.first : null;
 
+        // The name parsed out of a filename is a package name, which is often
+        // not the executable the package installs. Only offer it as a launch
+        // command when something by that name actually runs.
+        var launchGuess = '';
+        if (guessedName != null &&
+            await ExternalAppChecker.isExecutableOnPath(guessedName)) {
+          launchGuess = guessedName;
+        }
+
         setState(() {
           if (_nameController.text.trim().isEmpty) {
             _nameController.text = displayName;
@@ -125,8 +134,8 @@ class _AddAppDialogState extends State<AddAppDialog> {
           if (_packageNameController.text.isEmpty && guessedName != null) {
             _packageNameController.text = guessedName;
           }
-          if (_launchCommandController.text.isEmpty && guessedName != null) {
-            _launchCommandController.text = guessedName;
+          if (_launchCommandController.text.isEmpty) {
+            _launchCommandController.text = launchGuess;
           }
           _hasFetched = true;
           _isFetching = false;
@@ -150,6 +159,19 @@ class _AddAppDialogState extends State<AddAppDialog> {
       final gh = context.read<GitHubService>();
       final info = await gh.getRepository(owner, repo);
 
+      final repoName = (info['name'] ?? '').toLowerCase();
+
+      // A repository name is often not the executable its package ships:
+      // FluxDown ships fluxdown-desktop and the package mq-run ships mq. Only
+      // offer the repository name as a launch command when something by that
+      // name actually runs; otherwise leave it for the install to fill in from
+      // the package payload.
+      var launchGuess = '';
+      if (repoName.isNotEmpty &&
+          await ExternalAppChecker.isExecutableOnPath(repoName)) {
+        launchGuess = repoName;
+      }
+
       if (!mounted) return;
       setState(() {
         _ownerController.text = info['owner']?['login'] ?? owner;
@@ -158,10 +180,10 @@ class _AddAppDialogState extends State<AddAppDialog> {
           _nameController.text = info['description'] ?? info['name'];
         }
         if (_packageNameController.text.isEmpty) {
-          _packageNameController.text = info['name'].toLowerCase();
+          _packageNameController.text = repoName;
         }
         if (_launchCommandController.text.isEmpty) {
-          _launchCommandController.text = info['name'].toLowerCase();
+          _launchCommandController.text = launchGuess;
         }
         _hasFetched = true;
         _isFetching = false;

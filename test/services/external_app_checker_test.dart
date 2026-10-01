@@ -221,4 +221,49 @@ void main() {
           reason: 'a slow lookup must not fall back to running the launcher');
     });
   });
+
+  group('ExternalAppChecker.isExecutableOnPath', () {
+    late Future<ProcessResult> Function(String, List<String>) originalRunner;
+
+    setUp(() {
+      originalRunner = ExternalAppChecker.processRunner;
+    });
+
+    tearDown(() {
+      ExternalAppChecker.processRunner = originalRunner;
+    });
+
+    test('true when which resolves a path', () async {
+      ExternalAppChecker.processRunner = (executable, args) async => ProcessResult(
+            0,
+            0,
+            '/usr/bin/mq\n',
+            '',
+          );
+      expect(await ExternalAppChecker.isExecutableOnPath('mq'), isTrue);
+    });
+
+    test('false when nothing by that name runs', () async {
+      // FluxDown: the repository name is not the name of anything installed.
+      ExternalAppChecker.processRunner =
+          (executable, args) async => ProcessResult(0, 1, '', '');
+      expect(await ExternalAppChecker.isExecutableOnPath('fluxdown'), isFalse);
+    });
+
+    test('false for an empty name, without running anything', () async {
+      var called = false;
+      ExternalAppChecker.processRunner = (executable, args) async {
+        called = true;
+        return ProcessResult(0, 0, '/usr/bin/x', '');
+      };
+      expect(await ExternalAppChecker.isExecutableOnPath(''), isFalse);
+      expect(called, isFalse, reason: 'an empty name cannot be a command');
+    });
+
+    test('false when which succeeds but prints no path', () async {
+      ExternalAppChecker.processRunner =
+          (executable, args) async => ProcessResult(0, 0, '', '');
+      expect(await ExternalAppChecker.isExecutableOnPath('mq'), isFalse);
+    });
+  });
 }

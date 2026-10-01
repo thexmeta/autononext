@@ -99,7 +99,7 @@ make bump-patch   # bump patch version
 make help         # list available targets
 ```
 
-Tests run with `flutter test` (there is no `make test` target); 31 test files plus shared mocks under `test/`. The project is verified clean with `flutter analyze` (no issues found) and `flutter test` (308 tests passing).
+Tests run with `flutter test` (there is no `make test` target); 31 test files plus shared mocks under `test/`. The project is verified clean with `flutter analyze` (no issues found) and `flutter test` (312 tests passing).
 
 ## Installation
 

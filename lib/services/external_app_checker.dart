@@ -139,6 +139,24 @@ class ExternalAppChecker {
     }
   }
 
+  /// Whether [name] resolves to an executable on the current PATH.
+  ///
+  /// Decides whether a guessed launch command is worth storing. A repository
+  /// name is frequently not the executable its package ships — FluxDown ships
+  /// `fluxdown-desktop`, the package `mq-run` ships `mq` — and a stored command
+  /// that cannot run also poisons version detection, which probes it for
+  /// `--version` and reports whatever comes back.
+  static Future<bool> isExecutableOnPath(String name) async {
+    if (name.isEmpty) return false;
+    try {
+      final res = await processRunner('which', [name])
+          .timeout(const Duration(seconds: 1));
+      return res.exitCode == 0 && res.stdout.toString().trim().isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Runs `<name> --version` / `<name> -v` for a binary found on PATH.
   static Future<String?> _pathBinaryVersion(String name) async {
     try {

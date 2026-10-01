@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/tracked_app.dart';
 import '../../services/github_service.dart';
+import '../../services/external_app_checker.dart';
 import 'error_snack.dart';
 import 'filter_preview.dart';
 
@@ -98,16 +99,27 @@ class _EditAppDialogState extends State<EditAppDialog> {
       final gh = context.read<GitHubService>();
       final info = await gh.getRepository(owner, repo);
 
+      final repoName = (info['name'] ?? '').toLowerCase();
+
+      // Only offer the repository name as a launch command when something by
+      // that name actually runs: a repository name is often not the executable
+      // its package ships (FluxDown ships fluxdown-desktop, mq-run ships mq).
+      var launchGuess = '';
+      if (repoName.isNotEmpty &&
+          await ExternalAppChecker.isExecutableOnPath(repoName)) {
+        launchGuess = repoName;
+      }
+
       if (!mounted) return;
       setState(() {
         if (_nameController.text.trim().isEmpty) {
           _nameController.text = info['description'] ?? info['name'];
         }
         if (_packageNameController.text.trim().isEmpty) {
-          _packageNameController.text = info['name'].toLowerCase();
+          _packageNameController.text = repoName;
         }
         if (_launchCommandController.text.trim().isEmpty) {
-          _launchCommandController.text = info['name'].toLowerCase();
+          _launchCommandController.text = launchGuess;
         }
         _isFetching = false;
       });
