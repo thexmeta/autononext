@@ -1,7 +1,7 @@
 name: autononext
 description: A Linux package manager for GitHub releases
 publish_to: 'none'
-version: 0.1.0-b4
+version: 0.1.0-b5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

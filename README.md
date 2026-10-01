@@ -4,7 +4,7 @@ A Linux package manager for GitHub releases, built with Flutter.
 
 Autononext helps you track, install, update, and manage applications distributed via GitHub releases. It provides a clean, modern GUI for managing your GitHub-sourced applications with support for multiple package formats.
 
-**Autononext is an enhanced version of [Autonomix](https://github.com/ninepointlabs/autonomix)** — it started as a fork of that project and has since had a large number of bug fixes and features added on top of it, including real upgrades for binary and archive installs, install-location detection, release-asset validation, and a rebuilt list UI. The previous repository for this work is [`thexmeta/autonomix`](https://github.com/thexmeta/autonomix); the original upstream is [`ninepointlabs/autonomix`](https://github.com/ninepointlabs/autonomix) (originally `plebone/autonomix`). Upstream is MIT-licensed, `Copyright (c) 2024 PlebOne`; that attribution is retained. Current app version: `0.1.0-b4` (from `pubspec.yaml`).
+**Autononext is an enhanced version of [Autonomix](https://github.com/ninepointlabs/autonomix)** — it started as a fork of that project and has since had a large number of bug fixes and features added on top of it, including real upgrades for binary and archive installs, install-location detection, release-asset validation, and a rebuilt list UI. The previous repository for this work is [`thexmeta/autonomix`](https://github.com/thexmeta/autonomix); the original upstream is [`ninepointlabs/autonomix`](https://github.com/ninepointlabs/autonomix) (originally `plebone/autonomix`). Upstream is MIT-licensed, `Copyright (c) 2024 PlebOne`; that attribution is retained. Current app version: `0.1.0-b5` (from `pubspec.yaml`).
 
 ![License](https://img.shields.io/github/license/thexmeta/autononext)
 ![Version](https://img.shields.io/github/v/release/thexmeta/autononext?include_prereleases)
@@ -103,12 +103,12 @@ Tests run with `flutter test` (there is no `make test` target); 31 test files pl
 
 ## Installation
 
-Prebuilt packages are attached to every tagged release on the [Releases page](https://github.com/thexmeta/autononext/releases). The current version, `0.1.0-b4`, is a pre-release.
+Prebuilt packages are attached to every tagged release on the [Releases page](https://github.com/thexmeta/autononext/releases). The current version, `0.1.0-b5`, is a pre-release.
 
 ### Debian / Ubuntu
 
 ```bash
-sudo dpkg -i autononext_0.1.0.b4_amd64.deb
+sudo dpkg -i autononext_0.1.0.b5_amd64.deb
 ```
 
 Installs to `/opt/autononext` with a symlink at `/usr/local/bin/autononext`.
@@ -116,7 +116,7 @@ Installs to `/opt/autononext` with a symlink at `/usr/local/bin/autononext`.
 ### Fedora / RHEL / CentOS
 
 ```bash
-sudo rpm -i autononext-0.1.0-0.b4.x86_64.rpm
+sudo rpm -i autononext-0.1.0-0.b5.x86_64.rpm
 ```
 
 Installs to `/opt/autononext` with a symlink at `/usr/bin/autononext`.
@@ -124,7 +124,7 @@ Installs to `/opt/autononext` with a symlink at `/usr/bin/autononext`.
 ### Any Linux x64 (portable tarball)
 
 ```bash
-tar -xzf autononext-0.1.0-b4-linux-x64.tar.gz
+tar -xzf autononext-0.1.0-b5-linux-x64.tar.gz
 ./bundle/autononext
 ```
 
@@ -230,7 +230,7 @@ flutter test
 
 `make build-deb` and `make build-rpm` run the Flutter build themselves, assemble the package in `/tmp`, and write the artifact to `dist/`.
 
-The `Version:` each packager writes is derived from `pubspec.yaml`, with the `-bN` build suffix mapped to the convention each format needs: Debian gets `0.1.0~b4`, and RPM gets `Version: 0.1.0` with `Release: 0.b4`. Both sort **below** the matching final release, so a beta is always upgraded by it.
+The `Version:` each packager writes is derived from `pubspec.yaml`, with the `-bN` build suffix mapped to the convention each format needs: Debian gets `0.1.0~b5`, and RPM gets `Version: 0.1.0` with `Release: 0.b5`. Both sort **below** the matching final release, so a beta is always upgraded by it.
 
 #### DEB Package
 ```bash
@@ -257,19 +257,19 @@ make build-rpm
 The `create-release` job attaches all three to a GitHub Release. To cut one:
 
 ```bash
-git tag v0.1.0-b4 && git push origin v0.1.0-b4
+git tag v0.1.0-b5 && git push origin v0.1.0-b5
 ```
 
-Whether that release is a pre-release is derived from the tag name, so there is nothing to edit when switching between betas and finals. A tag ending in a beta/rc/pre/dev/nightly marker — `v0.1.0-b4`, `v1.0.0-rc2` — is published as a **pre-release**, so it is never handed out as the repository's "Latest" release. A plain `v1.2.3` is published as a full release.
+Whether that release is a pre-release is derived from the tag name, so there is nothing to edit when switching between betas and finals. A tag ending in a beta/rc/pre/dev/nightly marker — `v0.1.0-b5`, `v1.0.0-rc2` — is published as a **pre-release**, so it is never handed out as the repository's "Latest" release. A plain `v1.2.3` is published as a full release.
 
 Beta ordering is handled per format, so the eventual final release always upgrades a beta:
 
-| format | tag `v0.1.0-b4` becomes | sorts |
+| format | tag `v0.1.0-b5` becomes | sorts |
 |---|---|---|
-| `.deb` | `Version: 0.1.0~b4` | below `0.1.0` |
-| `.rpm` | `Version: 0.1.0`, `Release: 0.b4` | below `Release: 1` |
+| `.deb` | `Version: 0.1.0~b5` | below `0.1.0` |
+| `.rpm` | `Version: 0.1.0`, `Release: 0.b5` | below `Release: 1` |
 
-Push tags individually (`git push origin v0.1.0-b4`) rather than with `--tags`. The `upstream` remote (`ninepointlabs/autonomix`) carries its own historical release tags; if you ever fetch them (`git fetch upstream --tags`), a `--tags` push would publish refs that are not part of this history and trigger a release build for each one.
+Push tags individually (`git push origin v0.1.0-b5`) rather than with `--tags`. The `upstream` remote (`ninepointlabs/autonomix`) carries its own historical release tags; if you ever fetch them (`git fetch upstream --tags`), a `--tags` push would publish refs that are not part of this history and trigger a release build for each one.
 
 ### CLI
 
